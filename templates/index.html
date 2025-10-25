@@ -1,0 +1,729 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Campus AI Assistant - Dual Chat</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: Arial, sans-serif; background: #f5f5f5; height: 100vh; }
+        .split-container { display: flex; height: 100vh; }
+        .person-section { flex: 1; padding: 10px; border-right: 2px solid #ddd; }
+        .person-section:last-child { border-right: none; }
+        .person-header { text-align: center; margin-bottom: 20px; background: white; padding: 15px; border-radius: 10px; }
+        .person-title { color: #007bff; margin-bottom: 10px; }
+        .language-selection { text-align: center; }
+        .language-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-top: 20px; }
+        .lang-btn { padding: 10px; font-size: 12px; border: 2px solid #007bff; background: white; color: #007bff; border-radius: 8px; cursor: pointer; }
+        .lang-btn:hover { background: #007bff; color: white; }
+        .chat-container { background: white; border-radius: 10px; height: calc(100vh - 180px); display: flex; flex-direction: column; }
+        .messages { flex: 1; padding: 15px; overflow-y: auto; }
+        .message { margin-bottom: 10px; }
+        .user-message { text-align: right; }
+        .bot-message { text-align: left; }
+        .message-bubble { display: inline-block; padding: 8px 12px; border-radius: 15px; max-width: 80%; font-size: 14px; }
+        .user-message .message-bubble { background: #007bff; color: white; }
+        .bot-message .message-bubble { background: #e9ecef; color: #333; }
+        .input-area { padding: 15px; border-top: 1px solid #eee; display: flex; gap: 8px; }
+        .input-area input { flex: 1; padding: 8px; border: 1px solid #ddd; border-radius: 20px; outline: none; font-size: 14px; }
+        .input-area button { padding: 8px 15px; background: #007bff; color: white; border: none; border-radius: 20px; cursor: pointer; font-size: 12px; }
+        .voice-btn { background: #28a745 !important; }
+        .voice-btn.recording { background: #dc3545 !important; animation: pulse 1s infinite; }
+        @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.5; } 100% { opacity: 1; } }
+        .language-info { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; color: #666; font-size: 12px; }
+        .change-lang-btn { padding: 4px 8px; background: #6c757d; color: white; border: none; border-radius: 12px; cursor: pointer; font-size: 10px; }
+    </style>
+</head>
+<body>
+    <div class="split-container">
+        <!-- Person 1 Section -->
+        <div class="person-section">
+            <div class="person-header">
+                <h2 class="person-title">👤 Person 1</h2>
+                <div id="lang-selection-1" class="language-selection">
+                    <p>Select Language</p>
+                    <div class="language-grid">
+                        <button class="lang-btn" onclick="selectLanguage(1, 'en', 'English')">🇬🇧 English</button>
+                        <button class="lang-btn" onclick="selectLanguage(1, 'hi', 'हिंदी')">🇮🇳 हिंदी</button>
+                        <button class="lang-btn" onclick="selectLanguage(1, 'te', 'తెలుగు')">🇮🇳 తెలుగు</button>
+                        <button class="lang-btn" onclick="selectLanguage(1, 'ta', 'தமிழ்')">🇮🇳 தமிழ்</button>
+                    </div>
+                </div>
+                <div id="lang-info-1" class="language-info" style="display: none;">
+                    <span id="selected-language-1">Language: English</span>
+                    <button class="change-lang-btn" onclick="showLanguageSelection(1)">Change</button>
+                </div>
+            </div>
+            
+            <div id="chat-1" class="chat-container" style="display: none;">
+                <div class="messages" id="messages-1"></div>
+                <div class="input-area">
+                    <input type="text" id="input-1" placeholder="Type message..." onkeypress="handleKeyPress(event, 1)">
+                    <button id="voice-1" class="voice-btn" onclick="toggleVoice(1)">🎤</button>
+                    <button onclick="sendMessage(1)" id="send-1">Send</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Person 2 Section -->
+        <div class="person-section">
+            <div class="person-header">
+                <h2 class="person-title">👤 Person 2</h2>
+                <div id="lang-selection-2" class="language-selection">
+                    <p>Select Language</p>
+                    <div class="language-grid">
+                        <button class="lang-btn" onclick="selectLanguage(2, 'en', 'English')">🇬🇧 English</button>
+                        <button class="lang-btn" onclick="selectLanguage(2, 'hi', 'हिंदी')">🇮🇳 हिंदी</button>
+                        <button class="lang-btn" onclick="selectLanguage(2, 'te', 'తెలుగు')">🇮🇳 తెలుగు</button>
+                        <button class="lang-btn" onclick="selectLanguage(2, 'ta', 'தமிழ்')">🇮🇳 தமிழ்</button>
+                    </div>
+                </div>
+                <div id="lang-info-2" class="language-info" style="display: none;">
+                    <span id="selected-language-2">Language: English</span>
+                    <button class="change-lang-btn" onclick="showLanguageSelection(2)">Change</button>
+                </div>
+            </div>
+            
+            <div id="chat-2" class="chat-container" style="display: none;">
+                <div class="messages" id="messages-2"></div>
+                <div class="input-area">
+                    <input type="text" id="input-2" placeholder="Type message..." onkeypress="handleKeyPress(event, 2)">
+                    <button id="voice-2" class="voice-btn" onclick="toggleVoice(2)">🎤</button>
+                    <button onclick="sendMessage(2)" id="send-2">Send</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let recognition = {};
+        let isRecording = {};
+        let selectedLanguage = {};
+        let selectedLanguageCode = {};
+
+        const languageConfig = {
+            'en': { name: 'English', speechLang: 'en-US', welcome: 'Hello! Campus assistant ready.', placeholder: 'Type message...', send: 'Send' },
+            'hi': { name: 'हिंदी', speechLang: 'hi-IN', welcome: 'नमस्ते! कैंपस सहायक तैयार।', placeholder: 'संदेश टाइप करें...', send: 'भेजें' },
+            'te': { name: 'తెలుగు', speechLang: 'te-IN', welcome: 'నమస్కారం! క్యాంపస్ సహాయకుడు సిద్ధం।', placeholder: 'సందేశం టైప్ చేయండి...', send: 'పంపు' },
+            'ta': { name: 'தமிழ்', speechLang: 'ta-IN', welcome: 'வணக்கம்! வளாக உதவியாளர் தயார்।', placeholder: 'செய்தி தட்டச்சு செய்யுங்கள்...', send: 'அனுப்பு' }
+        };
+
+        function selectLanguage(person, langCode, langName) {
+            selectedLanguageCode[person] = langCode;
+            selectedLanguage[person] = langName;
+            
+            document.getElementById(`lang-selection-${person}`).style.display = 'none';
+            document.getElementById(`lang-info-${person}`).style.display = 'flex';
+            document.getElementById(`chat-${person}`).style.display = 'flex';
+            
+            const config = languageConfig[langCode];
+            document.getElementById(`selected-language-${person}`).textContent = `Language: ${config.name}`;
+            document.getElementById(`input-${person}`).placeholder = config.placeholder;
+            document.getElementById(`send-${person}`).textContent = config.send;
+            
+            addMessage(person, config.welcome, 'bot');
+            initializeSpeechRecognition(person, config.speechLang);
+        }
+
+        function showLanguageSelection(person) {
+            document.getElementById(`chat-${person}`).style.display = 'none';
+            document.getElementById(`lang-info-${person}`).style.display = 'none';
+            document.getElementById(`lang-selection-${person}`).style.display = 'block';
+            document.getElementById(`messages-${person}`).innerHTML = '';
+        }
+
+        function initializeSpeechRecognition(person, lang) {
+            if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
+                recognition[person] = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
+                recognition[person].continuous = false;
+                recognition[person].interimResults = false;
+                recognition[person].lang = lang;
+
+                recognition[person].onresult = function(event) {
+                    const transcript = event.results[0][0].transcript;
+                    document.getElementById(`input-${person}`).value = transcript;
+                };
+
+                recognition[person].onerror = function(event) {
+                    stopRecording(person);
+                };
+
+                recognition[person].onend = function() {
+                    stopRecording(person);
+                };
+            }
+        }
+
+        const translations = {
+            'en': { 'hi': 'नमस्ते', 'te': 'నమస్కారం', 'ta': 'வணக்கம்' },
+            'hi': { 'en': 'Hello', 'te': 'నమస్కారం', 'ta': 'வணக்கம்' },
+            'te': { 'en': 'Hello', 'hi': 'नमस्ते', 'ta': 'வணக்கம்' },
+            'ta': { 'en': 'Hello', 'hi': 'नमस्ते', 'te': 'నమస్కారం' }
+        };
+
+        function translateMessage(message, fromLang, toLang) {
+            if (fromLang === toLang) return message;
+            return translations[fromLang]?.[toLang] || message;
+        }
+
+        function toggleVoice(person) {
+            if (!recognition[person]) return;
+            if (isRecording[person]) {
+                recognition[person].stop();
+            } else {
+                recognition[person].start();
+                startRecording(person);
+            }
+        }
+
+        function startRecording(person) {
+            isRecording[person] = true;
+            document.getElementById(`voice-${person}`).classList.add('recording');
+        }
+
+        function stopRecording(person) {
+            isRecording[person] = false;
+            document.getElementById(`voice-${person}`).classList.remove('recording');
+        }
+
+        function handleKeyPress(event, person) {
+            if (event.key === 'Enter') {
+                sendMessage(person);
+            }
+        }
+
+        async function sendMessage(person) {
+            const input = document.getElementById(`input-${person}`);
+            const message = input.value.trim();
+            if (message === '') return;
+            
+            addMessage(person, message, 'user');
+            input.value = '';
+            
+            // Send to Gemini AI
+            try {
+                const response = await fetch('/chat', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        message: message,
+                        language: selectedLanguageCode[person]
+                    })
+                });
+                const data = await response.json();
+                addMessage(person, data.response, 'bot');
+                
+                // Send translated message to other person
+                const otherPerson = person === 1 ? 2 : 1;
+                if (selectedLanguageCode[otherPerson]) {
+                    const translatedMessage = translateMessage(message, selectedLanguageCode[person], selectedLanguageCode[otherPerson]);
+                    addMessage(otherPerson, `Person ${person}: ${translatedMessage}`, 'user');
+                    
+                    // Get AI response for other person too
+                    const otherResponse = await fetch('/chat', {
+                        method: 'POST',
+                        headers: {'Content-Type': 'application/json'},
+                        body: JSON.stringify({
+                            message: translatedMessage,
+                            language: selectedLanguageCode[otherPerson]
+                        })
+                    });
+                    const otherData = await otherResponse.json();
+                    addMessage(otherPerson, otherData.response, 'bot');
+                }
+            } catch (error) {
+                addMessage(person, 'Sorry, could not connect to AI.', 'bot');
+            }
+        }
+
+        function addMessage(person, text, sender) {
+            const messagesContainer = document.getElementById(`messages-${person}`);
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${sender}-message`;
+            const bubbleDiv = document.createElement('div');
+            bubbleDiv.className = 'message-bubble';
+            bubbleDiv.textContent = text;
+            messageDiv.appendChild(bubbleDiv);
+            messagesContainer.appendChild(messageDiv);
+            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+        }
+
+        function generateBotResponse(person, userMessage) {
+            const responses = {
+                'en': ['I can help with campus info.', 'Visit admissions office.', 'Campus has library and labs.'],
+                'hi': ['मैं कैंपस जानकारी में मदद कर सकता हूं।', 'प्रवेश कार्यालय जाएं।'],
+                'te': ['నేను క్యాంపస్ సమాచారంతో సహాయపడగలను।', 'ప్రవేశ కార్యాలయాన్ని సందర్శించండి।'],
+                'ta': ['நான் வளாக தகவலுடன் உதவ முடியும்।', 'சேர்க்கை அலுவலகத்தைப் பார்வையிடவும்।']
+            };
+            const langResponses = responses[selectedLanguageCode[person]] || responses['en'];
+            return langResponses[Math.floor(Math.random() * langResponses.length)];
+        }
+    </script>
+</body>
+</html>nition[person].onend = function() {
+                    stopRecording(person);
+                };
+            }
+        }
+
+        function toggleVoice(person) {
+            if (!recognition[person]) return;
+            if (isRecording[person]) {
+                recognition[person].stop();
+            } else {
+                recognition[person].start();
+                startRecording(person);
+            }
+        }
+
+        function startRecording(person) {
+            isRecording[person] = true;
+            document.getElementById(`voice-${person}`).classList.add('recording');
+        }
+
+        function stopRecording(person) {
+            isRecording[person] = false;
+            document.getElementById(`voice-${person}`).classList.remove('recording');
+        }
+
+        function handleKeyPress(event, person) {
+            if (event.key === 'Enter') {
+                sendMessage(person);
+            }
+        }
+
+        function sendMessage(person) {
+            const input = document.getElementById(`input-${person}`);
+            const message = input.value.trim();
+            if (message === '') return;
+            addMessage(person, message, 'user');
+            input.value = '';
+            setTimeout(() => {
+                const botResponse = generateBotResponse(person, message);
+                addMessage(person, botResponse, 'bot');
+            }, 1000);
+        }
+
+        function addMessage(person, text, sender) {
+            const messagesContainer = document.getElementById(`messages-${person}`);
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${sender}-message`;
+            const bubbleDiv = document.createElement('div');
+            bubbleDiv.className = 'message-bubble';
+            bubbleDiv.textContent = text;
+            messageDiv.appendChild(bubbleDiv);
+            messagesContainer.appendChild(messageDiv);
+            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+        }
+
+        function generateBotResponse(person, userMessage) {
+            const responses = {
+                'en': ['I can help with campus info.', 'Visit admissions office.', 'Campus has library and labs.'],
+                'hi': ['मैं कैंपस जानकारी में मदद कर सकता हूं।', 'प्रवेश कार्यालय जाएं।'],
+                'te': ['నేను క్యాంపస్ సమాచారంతో సహాయపడగలను।', 'ప్రవేశ కార్యాలయాన్ని సందర్శించండి।'],
+                'ta': ['நான் வளாக தகவலுடன் உதவ முடியும்।', 'சேர்க்கை அலுவலகத்தைப் பார்வையிடவும்।']
+            };
+            const langResponses = responses[selectedLanguageCode[person]] || responses['en'];
+            return langResponses[Math.floor(Math.random() * langResponses.length)];
+        }
+    </script>
+</body>
+</html>nition[person].onend = function() {
+                    stopRecording(person);
+                };
+            }
+        }
+
+        function toggleVoice(person) {
+            if (!recognition[person]) return;
+            if (isRecording[person]) {
+                recognition[person].stop();
+            } else {
+                recognition[person].start();
+                startRecording(person);
+            }
+        }
+
+        function startRecording(person) {
+            isRecording[person] = true;
+            document.getElementById(`voice-${person}`).classList.add('recording');
+        }
+
+        function stopRecording(person) {
+            isRecording[person] = false;
+            document.getElementById(`voice-${person}`).classList.remove('recording');
+        }
+
+        function handleKeyPress(event, person) {
+            if (event.key === 'Enter') {
+                sendMessage(person);
+            }
+        }
+
+        function sendMessage(person) {
+            const input = document.getElementById(`input-${person}`);
+            const message = input.value.trim();
+            if (message === '') return;
+            addMessage(person, message, 'user');
+            input.value = '';
+            setTimeout(() => {
+                const botResponse = generateBotResponse(person, message);
+                addMessage(person, botResponse, 'bot');
+            }, 1000);
+        }
+
+        function addMessage(person, text, sender) {
+            const messagesContainer = document.getElementById(`messages-${person}`);
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${sender}-message`;
+            const bubbleDiv = document.createElement('div');
+            bubbleDiv.className = 'message-bubble';
+            bubbleDiv.textContent = text;
+            messageDiv.appendChild(bubbleDiv);
+            messagesContainer.appendChild(messageDiv);
+            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+        }
+
+        function generateBotResponse(person, userMessage) {
+            const responses = {
+                'en': ['I can help with campus info.', 'Visit admissions office.', 'Campus has library and labs.'],
+                'hi': ['मैं कैंपस जानकारी में मदद कर सकता हूं।', 'प्रवेश कार्यालय जाएं।'],
+                'te': ['నేను క్యాంపస్ సమాచారంతో సహాయపడగలను।', 'ప్రవేశ కార్యాలయాన్ని సందర్శించండి।'],
+                'ta': ['நான் வளாக தகவலுடன் உதவ முடியும்।', 'சேர்க்கை அலுவலகத்தைப் பார்வையிடவும்।']
+            };
+            const langResponses = responses[selectedLanguageCode[person]] || responses['en'];
+            return langResponses[Math.floor(Math.random() * langResponses.length)];
+        }
+    </script>
+</body>
+</html>nition[person].onend = function() {
+                    stopRecording(person);
+                };
+            }
+        }
+
+        function toggleVoice(person) {
+            if (!recognition[person]) return;
+
+            if (isRecording[person]) {
+                recognition[person].stop();
+            } else {
+                recognition[person].start();
+                startRecording(person);
+            }
+        }
+
+        function startRecording(person) {
+            isRecording[person] = true;
+            document.getElementById(`voice-${person}`).classList.add('recording');
+        }
+
+        function stopRecording(person) {
+            isRecording[person] = false;
+            document.getElementById(`voice-${person}`).classList.remove('recording');
+        }
+
+        function handleKeyPress(event, person) {
+            if (event.key === 'Enter') {
+                sendMessage(person);
+            }
+        }
+
+        function sendMessage(person) {
+            const input = document.getElementById(`input-${person}`);
+            const message = input.value.trim();
+            
+            if (message === '') return;
+            
+            addMessage(person, message, 'user');
+            input.value = '';
+            
+            setTimeout(() => {
+                const botResponse = generateBotResponse(person, message);
+                addMessage(person, botResponse, 'bot');
+            }, 1000);
+        }
+
+        function addMessage(person, text, sender) {
+            const messagesContainer = document.getElementById(`messages-${person}`);
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${sender}-message`;
+            
+            const bubbleDiv = document.createElement('div');
+            bubbleDiv.className = 'message-bubble';
+            bubbleDiv.textContent = text;
+            
+            messageDiv.appendChild(bubbleDiv);
+            messagesContainer.appendChild(messageDiv);
+            
+            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+        }
+
+        function generateBotResponse(person, userMessage) {
+            const responses = {
+                'en': ['I can help with campus info.', 'Visit admissions office for details.', 'Campus has library and labs.'],
+                'hi': ['मैं कैंपस जानकारी में मदद कर सकता हूं।', 'विवरण के लिए प्रवेश कार्यालय जाएं।'],
+                'te': ['నేను క్యాంపస్ సమాచారంతో సహాయపడగలను।', 'వివరాలకు ప్రవేశ కార్యాలయాన్ని సందర్శించండి।'],
+                'ta': ['நான் வளாக தகவலுடன் உதவ முடியும்।', 'விவரங்களுக்கு சேர்க்கை அலுவலகத்தைப் பார்வையிடவும்।']
+            };
+            
+            const langResponses = responses[selectedLanguageCode[person]] || responses['en'];
+            return langResponses[Math.floor(Math.random() * langResponses.length)];
+        }
+    </script>
+</body>
+</html>nition[person].onend = function() {
+                    stopRecording(person);
+                };
+            }
+        }
+
+        function toggleVoice(person) {
+            if (!recognition[person]) return;
+
+            if (isRecording[person]) {
+                recognition[person].stop();
+            } else {
+                recognition[person].start();
+                startRecording(person);
+            }
+        }
+
+        function startRecording(person) {
+            isRecording[person] = true;
+            document.getElementById(`voice-${person}`).classList.add('recording');
+        }
+
+        function stopRecording(person) {
+            isRecording[person] = false;
+            document.getElementById(`voice-${person}`).classList.remove('recording');
+        }
+
+        function handleKeyPress(event, person) {
+            if (event.key === 'Enter') {
+                sendMessage(person);
+            }
+        }
+
+        function sendMessage(person) {
+            const input = document.getElementById(`input-${person}`);
+            const message = input.value.trim();
+            
+            if (message === '') return;
+            
+            addMessage(person, message, 'user');
+            input.value = '';
+            
+            setTimeout(() => {
+                const botResponse = generateBotResponse(person, message);
+                addMessage(person, botResponse, 'bot');
+            }, 1000);
+        }
+
+        function addMessage(person, text, sender) {
+            const messagesContainer = document.getElementById(`messages-${person}`);
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${sender}-message`;
+            
+            const bubbleDiv = document.createElement('div');
+            bubbleDiv.className = 'message-bubble';
+            bubbleDiv.textContent = text;
+            
+            messageDiv.appendChild(bubbleDiv);
+            messagesContainer.appendChild(messageDiv);
+            
+            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+        }
+
+        function generateBotResponse(person, userMessage) {
+            const responses = {
+                'en': ['I can help with campus info.', 'Visit admissions office for details.', 'Campus has library and labs.'],
+                'hi': ['मैं कैंपस जानकारी में मदद कर सकता हूं।', 'विवरण के लिए प्रवेश कार्यालय जाएं।'],
+                'te': ['నేను క్యాంపస్ సమాచారంతో సహాయపడగలను।', 'వివరాలకు ప్రవేశ కార్యాలయాన్ని సందర్శించండి।'],
+                'ta': ['நான் வளாக தகவலுடன் உதவ முடியும்।', 'விவரங்களுக்கு சேர்க்கை அலுவலகத்தைப் பார்வையிடவும்।']
+            };
+            
+            const langResponses = responses[selectedLanguageCode[person]] || responses['en'];
+            return langResponses[Math.floor(Math.random() * langResponses.length)];
+        }
+    </script>
+</body>
+</html>t.getElementById('user-input').value = transcript;
+                };
+
+                recognition.onerror = function(event) {
+                    console.error('Speech recognition error:', event.error);
+                    stopRecording();
+                };
+
+                recognition.onend = function() {
+                    stopRecording();
+                };
+            }
+        }
+
+        function toggleVoiceInput() {
+            if (!recognition) {
+                alert('Speech recognition not supported in this browser');
+                return;
+            }
+
+            if (isRecording) {
+                recognition.stop();
+            } else {
+                recognition.start();
+                startRecording();
+            }
+        }
+
+        function startRecording() {
+            isRecording = true;
+            document.getElementById('voice-btn').classList.add('recording');
+        }
+
+        function stopRecording() {
+            isRecording = false;
+            document.getElementById('voice-btn').classList.remove('recording');
+        }
+
+        function handleKeyPress(event) {
+            if (event.key === 'Enter') {
+                sendMessage();
+            }
+        }
+
+        function sendMessage() {
+            const input = document.getElementById('user-input');
+            const message = input.value.trim();
+            
+            if (message === '') return;
+            
+            addMessage(message, 'user');
+            input.value = '';
+            
+            // Simulate bot response
+            setTimeout(() => {
+                const botResponse = generateBotResponse(message);
+                addMessage(botResponse, 'bot');
+            }, 1000);
+        }
+
+        function addMessage(text, sender) {
+            const messagesContainer = document.getElementById('messages');
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${sender}-message`;
+            
+            const bubbleDiv = document.createElement('div');
+            bubbleDiv.className = 'message-bubble';
+            bubbleDiv.textContent = text;
+            
+            messageDiv.appendChild(bubbleDiv);
+            messagesContainer.appendChild(messageDiv);
+            
+            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+        }
+
+        function generateBotResponse(userMessage) {
+            const responses = {
+                'en': [
+                    'I can help you with admissions, campus facilities, and student services.',
+                    'For admissions information, please visit the admissions office or check our website.',
+                    'Our campus has library, cafeteria, sports facilities, and computer labs.',
+                    'Student services include counseling, career guidance, and academic support.'
+                ],
+                'hi': [
+                    'मैं प्रवेश, कैंपस सुविधाओं और छात्र सेवाओं में आपकी मदद कर सकता हूं।',
+                    'प्रवेश की जानकारी के लिए, कृपया प्रवेश कार्यालय जाएं या हमारी वेबसाइट देखें।',
+                    'हमारे कैंपस में पुस्तकालय, कैफेटेरिया, खेल सुविधाएं और कंप्यूटर लैब हैं।'
+                ]
+            };
+            
+            const langResponses = responses[selectedLanguageCode] || responses['en'];
+            return langResponses[Math.floor(Math.random() * langResponses.length)];
+        }
+    </script>
+</body>
+</html>t.getElementById('user-input').value = transcript;
+                };
+
+                recognition.onend = function() {
+                    isRecording = false;
+                    document.getElementById('voice-btn').classList.remove('recording');
+                    document.getElementById('voice-btn').textContent = '🎤';
+                };
+            }
+        }
+
+        function toggleVoiceInput() {
+            if (!recognition) {
+                alert('Speech recognition not supported in this browser');
+                return;
+            }
+
+            if (isRecording) {
+                recognition.stop();
+            } else {
+                recognition.start();
+                isRecording = true;
+                document.getElementById('voice-btn').classList.add('recording');
+                document.getElementById('voice-btn').textContent = '⏹️';
+            }
+        }
+
+        function speakText(text) {
+            if ('speechSynthesis' in window && selectedLanguageCode) {
+                const utterance = new SpeechSynthesisUtterance(text);
+                utterance.rate = 0.8;
+                utterance.pitch = 1;
+                utterance.lang = languageConfig[selectedLanguageCode].speechLang;
+                speechSynthesis.speak(utterance);
+            }
+        }
+
+        async function sendMessage() {
+            const input = document.getElementById('user-input');
+            const message = input.value.trim();
+            if (!message) return;
+
+            addMessage(message, 'user');
+            input.value = '';
+
+            try {
+                const response = await fetch('/chat', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ 
+                        message: message, 
+                        user_id: 'web_user',
+                        preferred_language: selectedLanguageCode
+                    })
+                });
+
+                const data = await response.json();
+                addMessage(data.response, 'bot');
+                speakText(data.response);
+            } catch (error) {
+                const errorMsg = selectedLanguageCode === 'en' ? 
+                    'Sorry, I encountered an error. Please try again.' :
+                    'क्षमा करें, मुझे एक त्रुटि का सामना करना पड़ा। कृपया पुनः प्रयास करें।';
+                addMessage(errorMsg, 'bot');
+            }
+        }
+
+        function addMessage(text, sender) {
+            const messages = document.getElementById('messages');
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${sender}-message`;
+            messageDiv.innerHTML = `<div class="message-bubble">${text}</div>`;
+            messages.appendChild(messageDiv);
+            messages.scrollTop = messages.scrollHeight;
+        }
+
+        function handleKeyPress(event) {
+            if (event.key === 'Enter') {
+                sendMessage();
+            }
+        }
+    </script>
+</body>
+</html>

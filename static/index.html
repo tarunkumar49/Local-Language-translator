@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Language Translator</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Poppins', sans-serif; background: url('https://images.unsplash.com/photo-1557683316-973673baf926?ixlib=rb-4.0.3&auto=format&fit=crop&w=2000&q=80') center/cover no-repeat fixed, linear-gradient(135deg, #667eea 0%, #764ba2 100%, #f093fb 200%); min-height: 100vh; position: relative; overflow-x: hidden; }
+        body::before { content: ''; position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: linear-gradient(135deg, rgba(102,126,234,0.8) 0%, rgba(118,75,162,0.8) 50%, rgba(240,147,251,0.6) 100%); pointer-events: none; }
+        .container { max-width: 1200px; margin: 0 auto; padding: 20px; }
+        .header { text-align: center; margin-bottom: 30px; color: white; }
+        .header h1 { font-family: 'Inter', sans-serif; font-size: 3rem; font-weight: 700; margin-bottom: 15px; text-shadow: 3px 3px 6px rgba(0,0,0,0.4); letter-spacing: -1px; background: linear-gradient(45deg, #fff, #f0f8ff); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+        .header p { font-size: 1.2rem; opacity: 0.95; font-weight: 300; letter-spacing: 0.5px; text-shadow: 1px 1px 2px rgba(0,0,0,0.2); }
+        .conversation-area { display: flex; gap: 25px; height: 500px; }
+        .person-chat { flex: 1; background: rgba(255,255,255,0.98); border-radius: 25px; box-shadow: 0 20px 40px rgba(0,0,0,0.15), 0 8px 20px rgba(0,0,0,0.1), inset 0 1px 0 rgba(255,255,255,0.8); display: flex; flex-direction: column; backdrop-filter: blur(15px); border: 1px solid rgba(255,255,255,0.3); position: relative; overflow: hidden; }
+        .person-chat::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px; background: linear-gradient(90deg, transparent, rgba(255,255,255,0.8), transparent); }
+        .person-header { padding: 25px 20px; background: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%); color: white; border-radius: 25px 25px 0 0; text-align: center; font-weight: 600; font-size: 1.1rem; letter-spacing: 1px; text-shadow: 1px 1px 2px rgba(0,0,0,0.3); position: relative; }
+        .person-header::after { content: ''; position: absolute; bottom: 0; left: 0; right: 0; height: 1px; background: linear-gradient(90deg, transparent, rgba(255,255,255,0.5), transparent); }
+        .person-header select { margin-left: 12px; padding: 10px 15px; border: none; border-radius: 15px; background: rgba(255,255,255,0.25); color: white; font-weight: 500; font-family: 'Poppins', sans-serif; font-size: 14px; backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.3); cursor: pointer; transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1); position: relative; overflow: hidden; }
+        .person-header select:hover { background: rgba(255,255,255,0.35); transform: translateY(-2px) scale(1.05); box-shadow: 0 8px 20px rgba(255,255,255,0.2); }
+        .person-header select:focus { outline: none; background: rgba(255,255,255,0.4); transform: translateY(-2px) scale(1.05); box-shadow: 0 0 0 3px rgba(255,255,255,0.3), 0 8px 20px rgba(255,255,255,0.2); }
+        .person-header select:active { transform: translateY(0) scale(0.98); transition: all 0.1s ease; }
+        .person-header select::before { content: ''; position: absolute; top: 0; left: -100%; width: 100%; height: 100%; background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent); transition: left 0.6s; }
+        .person-header select:hover::before { left: 100%; }
+        .person-header select option { background: #667eea; color: white; }
+        .messages { flex: 1; padding: 25px; overflow-y: auto; background: linear-gradient(to bottom, rgba(255,255,255,0.15), rgba(255,255,255,0.08)); position: relative; }
+        .messages::-webkit-scrollbar { width: 6px; }
+        .messages::-webkit-scrollbar-track { background: rgba(255,255,255,0.1); border-radius: 10px; }
+        .messages::-webkit-scrollbar-thumb { background: linear-gradient(135deg, #667eea, #764ba2); border-radius: 10px; }
+        .message { margin-bottom: 18px; animation: fadeInUp 0.4s ease-out; }
+        @keyframes fadeInUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+        .user-message { text-align: right; }
+        .bot-message { text-align: left; }
+        .translated-message { text-align: left; opacity: 0.7; font-style: italic; }
+        .message-bubble { display: inline-block; padding: 15px 22px; border-radius: 25px; max-width: 80%; box-shadow: 0 6px 20px rgba(0,0,0,0.15), 0 2px 6px rgba(0,0,0,0.1); font-family: 'Inter', sans-serif; font-size: 15px; line-height: 1.5; font-weight: 400; position: relative; backdrop-filter: blur(10px); }
+        .user-message .message-bubble { background: linear-gradient(135deg, #667eea 0%, #764ba2 70%, #f093fb 100%); color: white; text-shadow: 0 1px 2px rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.2); }
+        .bot-message .message-bubble { background: linear-gradient(135deg, #f093fb 0%, #f5576c 70%, #4facfe 100%); color: white; text-shadow: 0 1px 2px rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.2); }
+        .translated-message .message-bubble { background: linear-gradient(135deg, #ffecd2 0%, #fcb69f 70%, #ffd89b 100%); color: #8b4513; text-shadow: 0 1px 1px rgba(255,255,255,0.5); border: 1px solid rgba(252,182,159,0.3); }
+        .input-area { padding: 25px; border-top: 1px solid rgba(255,255,255,0.3); display: flex; gap: 15px; background: linear-gradient(135deg, rgba(255,255,255,0.1), rgba(255,255,255,0.05)); backdrop-filter: blur(10px); }
+        .input-area input { flex: 1; padding: 15px 22px; border: 2px solid rgba(255,255,255,0.3); border-radius: 30px; outline: none; background: rgba(255,255,255,0.95); font-size: 15px; font-family: 'Inter', sans-serif; font-weight: 400; box-shadow: inset 0 2px 4px rgba(0,0,0,0.05); transition: all 0.3s ease; }
+        .input-area input:focus { border-color: #667eea; box-shadow: 0 0 0 4px rgba(102,126,234,0.15), inset 0 2px 4px rgba(0,0,0,0.05); transform: translateY(-1px); }
+        .input-area button { padding: 15px 25px; border: none; border-radius: 30px; cursor: pointer; font-weight: 600; font-family: 'Poppins', sans-serif; font-size: 14px; letter-spacing: 0.5px; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); position: relative; overflow: hidden; }
+        .input-area button::before { content: ''; position: absolute; top: 0; left: -100%; width: 100%; height: 100%; background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent); transition: left 0.5s; }
+        .input-area button:hover::before { left: 100%; }
+        .input-area button:last-child { background: linear-gradient(135deg, #667eea 0%, #764ba2 70%, #f093fb 100%); color: white; box-shadow: 0 4px 15px rgba(102,126,234,0.3); }
+        .input-area button:last-child:hover { transform: translateY(-3px) scale(1.05); box-shadow: 0 12px 25px rgba(102,126,234,0.4); }
+        .voice-btn { background: linear-gradient(135deg, #11998e 0%, #38ef7d 70%, #7de88c 100%); color: white; font-size: 18px; min-width: 60px; box-shadow: 0 4px 15px rgba(17,153,142,0.3); }
+        .voice-btn:hover { transform: translateY(-3px) scale(1.05); box-shadow: 0 12px 25px rgba(17,153,142,0.4); }
+        .recording { background: linear-gradient(135deg, #ff6b6b 0%, #ee5a24 70%, #ff9ff3 100%) !important; animation: pulse 1.2s infinite; box-shadow: 0 0 20px rgba(255,107,107,0.6) !important; }
+        @keyframes pulse { 0% { opacity: 1; transform: scale(1) translateY(-3px); box-shadow: 0 12px 25px rgba(255,107,107,0.4); } 50% { opacity: 0.9; transform: scale(1.08) translateY(-4px); box-shadow: 0 15px 30px rgba(255,107,107,0.6); } 100% { opacity: 1; transform: scale(1) translateY(-3px); box-shadow: 0 12px 25px rgba(255,107,107,0.4); } }
+        .voice-status { font-size: 13px; color: rgba(0,0,0,0.65); margin-top: 10px; text-align: center; font-weight: 500; font-family: 'Inter', sans-serif; letter-spacing: 0.3px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>LANGUAGE TRANSLATOR</h1>
+            <p>Two people can speak in different languages and understand each other!</p>
+        </div>
+        
+        <div class="conversation-area">
+            <div class="person-chat">
+                <div class="person-header">
+                    Person 1
+                    <select id="lang-1" onchange="changeLanguage(1)">
+                        <option value="en">English</option>
+                        <option value="hi">Hindi</option>
+                        <option value="ta">Tamil</option>
+                        <option value="te">Telugu</option>
+                        <option value="bn">Bengali</option>
+                        <option value="kn">Kannada</option>
+                        <option value="ml">Malayalam</option>
+                        <option value="mr">Marathi</option>
+                        <option value="pa">Punjabi</option>
+                    </select>
+                </div>
+                <div class="messages" id="messages-1"></div>
+                <div class="input-area">
+                    <input type="text" id="input-1" placeholder="Type or click mic to speak..." onkeypress="handleKeyPress(event, 1)">
+                    <button class="voice-btn" id="voice-1" onclick="toggleVoice(1)" title="Click to speak">🎤</button>
+                    <button onclick="sendMessage(1)">Send</button>
+                </div>
+                <div class="voice-status" id="status-1">Click mic to speak</div>
+            </div>
+            
+            <div class="person-chat">
+                <div class="person-header">
+                    Person 2
+                    <select id="lang-2" onchange="changeLanguage(2)">
+                        <option value="en">English</option>
+                        <option value="hi">Hindi</option>
+                        <option value="ta">Tamil</option>
+                        <option value="te">Telugu</option>
+                        <option value="bn">Bengali</option>
+                        <option value="kn">Kannada</option>
+                        <option value="ml">Malayalam</option>
+                        <option value="mr">Marathi</option>
+                        <option value="pa">Punjabi</option>
+                    </select>
+                </div>
+                <div class="messages" id="messages-2"></div>
+                <div class="input-area">
+                    <input type="text" id="input-2" placeholder="Type or click mic to speak..." onkeypress="handleKeyPress(event, 2)">
+                    <button class="voice-btn" id="voice-2" onclick="toggleVoice(2)" title="Click to speak">🎤</button>
+                    <button onclick="sendMessage(2)">Send</button>
+                </div>
+                <div class="voice-status" id="status-2">Click mic to speak</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let selectedLanguage = { 1: 'en', 2: 'en' };
+        let recognition = { 1: null, 2: null };
+        let isRecording = { 1: false, 2: false };
+
+        function initSpeechRecognition() {
+            if ('webkitSpeechRecognition' in window) {
+                [1, 2].forEach(person => {
+                    recognition[person] = new webkitSpeechRecognition();
+                    recognition[person].continuous = false;
+                    recognition[person].interimResults = false;
+                    recognition[person].lang = selectedLanguage[person];
+                    
+                    recognition[person].onstart = function() {
+                        updateStatus(person, 'Listening... Speak now');
+                    };
+                    
+                    recognition[person].onresult = function(event) {
+                        const transcript = event.results[0][0].transcript;
+                        updateStatus(person, 'Processing...');
+                        sendVoiceMessage(person, transcript);
+                    };
+                    
+                    recognition[person].onend = function() {
+                        stopRecording(person);
+                        updateStatus(person, 'Click mic to speak');
+                    };
+                    
+                    recognition[person].onerror = function(event) {
+                        updateStatus(person, 'Error: Click mic to try again');
+                        stopRecording(person);
+                    };
+                });
+            }
+        }
+
+        function changeLanguage(person) {
+            const select = document.getElementById(`lang-${person}`);
+            selectedLanguage[person] = select.value;
+            
+            // Add animation effect
+            select.style.transform = 'scale(0.95)';
+            select.style.background = 'rgba(255,255,255,0.5)';
+            
+            setTimeout(() => {
+                select.style.transform = 'scale(1.1)';
+                select.style.background = 'rgba(255,255,255,0.35)';
+                
+                setTimeout(() => {
+                    select.style.transform = 'scale(1)';
+                    select.style.background = 'rgba(255,255,255,0.25)';
+                }, 150);
+            }, 100);
+            
+            if (recognition[person]) {
+                recognition[person].lang = selectedLanguage[person];
+            }
+        }
+
+        function toggleVoice(person) {
+            if (!recognition[person]) return;
+            if (isRecording[person]) {
+                recognition[person].stop();
+            } else {
+                recognition[person].start();
+                startRecording(person);
+            }
+        }
+
+        function startRecording(person) {
+            isRecording[person] = true;
+            const btn = document.getElementById(`voice-${person}`);
+            btn.classList.add('recording');
+            btn.textContent = '⏹️';
+            updateStatus(person, 'Recording... Click to stop');
+        }
+
+        function stopRecording(person) {
+            isRecording[person] = false;
+            const btn = document.getElementById(`voice-${person}`);
+            btn.classList.remove('recording');
+            btn.textContent = '🎤';
+        }
+        
+        function updateStatus(person, message) {
+            document.getElementById(`status-${person}`).textContent = message;
+        }
+
+        function handleKeyPress(event, person) {
+            if (event.key === 'Enter') {
+                sendMessage(person);
+            }
+        }
+
+        async function sendMessage(person) {
+            const input = document.getElementById(`input-${person}`);
+            const message = input.value.trim();
+            if (!message) return;
+
+            addMessage(person, message, 'user');
+
+            if (person === 1) {
+                const translatedMessage = await translateMessage(message, selectedLanguage[1], selectedLanguage[2]);
+                addMessage(2, `Person 1: ${translatedMessage}`, 'translated');
+                speakText(translatedMessage, selectedLanguage[2]);
+            } else if (person === 2) {
+                const translatedMessage = await translateMessage(message, selectedLanguage[2], selectedLanguage[1]);
+                addMessage(1, `Person 2: ${translatedMessage}`, 'translated');
+                speakText(translatedMessage, selectedLanguage[1]);
+            }
+
+            input.value = '';
+        }
+
+        async function sendVoiceMessage(person, message) {
+            addMessage(person, message, 'user');
+
+            if (person === 1) {
+                const translatedMessage = await translateMessage(message, selectedLanguage[1], selectedLanguage[2]);
+                addMessage(2, `Person 1: ${translatedMessage}`, 'translated');
+                speakText(translatedMessage, selectedLanguage[2]);
+            } else if (person === 2) {
+                const translatedMessage = await translateMessage(message, selectedLanguage[2], selectedLanguage[1]);
+                addMessage(1, `Person 2: ${translatedMessage}`, 'translated');
+                speakText(translatedMessage, selectedLanguage[1]);
+            }
+        }
+
+        async function translateMessage(text, fromLang, toLang) {
+            if (fromLang === toLang) return text;
+            
+            try {
+                const response = await fetch('/translate', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ text, from: fromLang, to: toLang })
+                });
+                const data = await response.json();
+                return data.translated_text || text;
+            } catch (error) {
+                console.error('Translation error:', error);
+                return text;
+            }
+        }
+
+        function addMessage(person, message, type) {
+            const messagesDiv = document.getElementById(`messages-${person}`);
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${type}-message`;
+            messageDiv.innerHTML = `<div class="message-bubble">${message}</div>`;
+            messagesDiv.appendChild(messageDiv);
+            messagesDiv.scrollTop = messagesDiv.scrollHeight;
+        }
+
+        function speakText(text, lang) {
+            if ('speechSynthesis' in window) {
+                const utterance = new SpeechSynthesisUtterance(text);
+                utterance.lang = lang;
+                speechSynthesis.speak(utterance);
+            }
+        }
+
+        window.onload = function() {
+            initSpeechRecognition();
+        };
+    </script>
+</body>
+</html>

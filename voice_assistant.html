@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Campus AI Assistant</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: Arial, sans-serif; background: #f5f5f5; }
+        .container { max-width: 800px; margin: 0 auto; padding: 20px; }
+        .header { text-align: center; margin-bottom: 30px; }
+        .chat-container { background: white; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); height: 500px; display: flex; flex-direction: column; }
+        .messages { flex: 1; padding: 20px; overflow-y: auto; }
+        .message { margin-bottom: 15px; }
+        .user-message { text-align: right; }
+        .bot-message { text-align: left; }
+        .message-bubble { display: inline-block; padding: 10px 15px; border-radius: 20px; max-width: 70%; }
+        .user-message .message-bubble { background: #007bff; color: white; }
+        .bot-message .message-bubble { background: #e9ecef; color: #333; }
+        .input-area { padding: 20px; border-top: 1px solid #eee; display: flex; gap: 10px; }
+        .input-area input { flex: 1; padding: 10px; border: 1px solid #ddd; border-radius: 25px; outline: none; }
+        .input-area button { padding: 10px 20px; background: #007bff; color: white; border: none; border-radius: 25px; cursor: pointer; }
+        .voice-btn { background: #28a745 !important; }
+        .voice-btn.recording { background: #dc3545 !important; animation: pulse 1s infinite; }
+        @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.5; } 100% { opacity: 1; } }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1 style="font-family: comfortaa;">language Translator</h1>
+            <p>Ask me about admissions, campus navigation, and student services!</p>
+        </div>
+        
+        <div class="chat-container">
+            <div class="messages" id="messages">
+                <div class="message bot-message">
+                    <div class="message-bubble">
+                        Hello! I'm your campus assistant. I can help with admissions, campus navigation, and student services. Try using voice input!
+                    </div>
+                </div>
+            </div>
+            
+            <div class="input-area">
+                <input type="text" id="user-input" placeholder="Type or speak your message..." onkeypress="handleKeyPress(event)">
+                <button id="voice-btn" class="voice-btn" onclick="toggleVoiceInput()">🎤</button>
+                <button onclick="sendMessage()">Send</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let recognition;
+        let isRecording = false;
+
+        const knowledgeBase = {
+            admission: {
+                procedures: 'Apply online → Document verification → Entrance test → Merit list → Fee payment',
+                deadlines: 'UG: June 30, PG: July 15, PhD: August 31',
+                eligibility: 'UG: 12th pass (60%), PG: Bachelor degree (55%), PhD: Master degree',
+                documents: 'Mark sheets, Transfer certificate, Caste certificate, Income certificate, Photos'
+            },
+            campus: {
+                library: 'Central Library - Block A, Ground Floor',
+                cafeteria: 'Main Cafeteria - Block B, 1st Floor',
+                admin: 'Administrative Office - Block C, 2nd Floor',
+                hostel: 'Boys Hostel - East Wing, Girls Hostel - West Wing'
+            },
+            services: {
+                results: 'Check results at college.edu/results with roll number',
+                attendance: 'Minimum 75% attendance required for exam eligibility',
+                timetable: 'Available on college portal and notice boards',
+                contact: 'Academic Office: +91-XXX-XXXXXXX, Admission: +91-XXX-XXXXXXX'
+            }
+        };
+
+        if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
+            recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
+            recognition.continuous = false;
+            recognition.interimResults = false;
+            recognition.lang = 'en-US';
+
+            recognition.onresult = function(event) {
+                const transcript = event.results[0][0].transcript;
+                document.getElementById('user-input').value = transcript;
+            };
+
+            recognition.onend = function() {
+                isRecording = false;
+                document.getElementById('voice-btn').classList.remove('recording');
+                document.getElementById('voice-btn').textContent = '🎤';
+            };
+        }
+
+        function toggleVoiceInput() {
+            if (!recognition) {
+                alert('Speech recognition not supported in this browser');
+                return;
+            }
+
+            if (isRecording) {
+                recognition.stop();
+            } else {
+                recognition.start();
+                isRecording = true;
+                document.getElementById('voice-btn').classList.add('recording');
+                document.getElementById('voice-btn').textContent = '⏹️';
+            }
+        }
+
+        function speakText(text) {
+            if ('speechSynthesis' in window) {
+                const utterance = new SpeechSynthesisUtterance(text);
+                utterance.rate = 0.8;
+                utterance.pitch = 1;
+                speechSynthesis.speak(utterance);
+            }
+        }
+
+        function getResponse(query) {
+            const queryLower = query.toLowerCase();
+            
+            if (queryLower.includes('admission') || queryLower.includes('apply') || queryLower.includes('eligibility')) {
+                if (queryLower.includes('procedure') || queryLower.includes('process')) {
+                    return knowledgeBase.admission.procedures;
+                } else if (queryLower.includes('deadline') || queryLower.includes('date')) {
+                    return knowledgeBase.admission.deadlines;
+                } else if (queryLower.includes('eligibility') || queryLower.includes('criteria')) {
+                    return knowledgeBase.admission.eligibility;
+                } else if (queryLower.includes('document') || queryLower.includes('certificate')) {
+                    return knowledgeBase.admission.documents;
+                } else {
+                    return `Admission info: ${knowledgeBase.admission.procedures}`;
+                }
+            }
+            
+            else if (queryLower.includes('library') || queryLower.includes('cafeteria') || queryLower.includes('admin') || queryLower.includes('hostel') || queryLower.includes('location') || queryLower.includes('where')) {
+                for (const [location, info] of Object.entries(knowledgeBase.campus)) {
+                    if (queryLower.includes(location)) {
+                        return info;
+                    }
+                }
+                return "Main locations: Library (Block A), Cafeteria (Block B), Admin (Block C), Hostels (East/West Wing)";
+            }
+            
+            else if (queryLower.includes('result') || queryLower.includes('attendance') || queryLower.includes('timetable') || queryLower.includes('contact')) {
+                for (const [service, info] of Object.entries(knowledgeBase.services)) {
+                    if (queryLower.includes(service)) {
+                        return info;
+                    }
+                }
+                return "Services: Results, Attendance (75% required), Timetable, Contact info available";
+            }
+            
+            else if (queryLower.includes('hello') || queryLower.includes('hi') || queryLower.includes('hey')) {
+                return "Hello! I'm your campus assistant. I can help with admissions, campus navigation, and student services.";
+            }
+            
+            else {
+                return "I can help with: Admissions, Campus locations, Student services (results, attendance, timetable). What would you like to know?";
+            }
+        }
+
+        function sendMessage() {
+            const input = document.getElementById('user-input');
+            const message = input.value.trim();
+            if (!message) return;
+
+            addMessage(message, 'user');
+            input.value = '';
+
+            const response = getResponse(message);
+            addMessage(response, 'bot');
+            speakText(response);
+        }
+
+        function addMessage(text, sender) {
+            const messages = document.getElementById('messages');
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${sender}-message`;
+            messageDiv.innerHTML = `<div class="message-bubble">${text}</div>`;
+            messages.appendChild(messageDiv);
+            messages.scrollTop = messages.scrollHeight;
+        }
+
+        function handleKeyPress(event) {
+            if (event.key === 'Enter') {
+                sendMessage();
+            }
+        }
+    </script>
+</body>
+</html>

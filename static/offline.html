@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Campus Multilingual Conversation - Offline</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: Arial, sans-serif; background: #f0f2f5; }
+        .container { max-width: 1200px; margin: 0 auto; padding: 20px; }
+        .header { text-align: center; margin-bottom: 20px; }
+        .conversation-area { display: flex; gap: 20px; height: 600px; }
+        .person-chat { flex: 1; background: white; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); display: flex; flex-direction: column; }
+        .person-header { padding: 15px; background: #007bff; color: white; border-radius: 10px 10px 0 0; text-align: center; }
+        .person-header select { margin-left: 10px; padding: 5px; border: none; border-radius: 5px; }
+        .messages { flex: 1; padding: 15px; overflow-y: auto; }
+        .message { margin-bottom: 10px; }
+        .user-message { text-align: right; }
+        .translated-message { text-align: left; opacity: 0.7; font-style: italic; }
+        .message-bubble { display: inline-block; padding: 8px 12px; border-radius: 15px; max-width: 80%; }
+        .user-message .message-bubble { background: #007bff; color: white; }
+        .translated-message .message-bubble { background: #fff3cd; color: #856404; border: 1px solid #ffeaa7; }
+        .input-area { padding: 15px; border-top: 1px solid #eee; display: flex; gap: 10px; }
+        .input-area input { flex: 1; padding: 8px; border: 1px solid #ddd; border-radius: 20px; outline: none; }
+        .input-area button { padding: 8px 15px; border: 1px solid #ddd; border-radius: 20px; cursor: pointer; }
+        .voice-btn { background: #28a745; color: white; border: none; font-size: 16px; min-width: 50px; }
+        .voice-btn:hover { background: #218838; }
+        .recording { background: #dc3545 !important; animation: pulse 1s infinite; }
+        @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.5; } 100% { opacity: 1; } }
+        .voice-status { font-size: 12px; color: #666; margin-top: 5px; text-align: center; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🎓 Campus Multilingual Conversation</h1>
+            <p>Two people can speak in different languages and understand each other!</p>
+        </div>
+        
+        <div class="conversation-area">
+            <div class="person-chat">
+                <div class="person-header">
+                    Person 1
+                    <select id="lang-1" onchange="changeLanguage(1)">
+                        <option value="en">English</option>
+                        <option value="hi">Hindi</option>
+                        <option value="ta">Tamil</option>
+                        <option value="te">Telugu</option>
+                        <option value="bn">Bengali</option>
+                        <option value="kn">Kannada</option>
+                        <option value="ml">Malayalam</option>
+                        <option value="mr">Marathi</option>
+                        <option value="pa">Punjabi</option>
+                    </select>
+                </div>
+                <div class="messages" id="messages-1"></div>
+                <div class="input-area">
+                    <input type="text" id="input-1" placeholder="Type or click mic to speak..." onkeypress="handleKeyPress(event, 1)">
+                    <button class="voice-btn" id="voice-1" onclick="toggleVoice(1)" title="Click to speak">🎤</button>
+                    <button onclick="sendMessage(1)">Send</button>
+                </div>
+                <div class="voice-status" id="status-1">Click mic to speak</div>
+            </div>
+            
+            <div class="person-chat">
+                <div class="person-header">
+                    Person 2
+                    <select id="lang-2" onchange="changeLanguage(2)">
+                        <option value="en">English</option>
+                        <option value="hi">Hindi</option>
+                        <option value="ta">Tamil</option>
+                        <option value="te">Telugu</option>
+                        <option value="bn">Bengali</option>
+                        <option value="kn">Kannada</option>
+                        <option value="ml">Malayalam</option>
+                        <option value="mr">Marathi</option>
+                        <option value="pa">Punjabi</option>
+                    </select>
+                </div>
+                <div class="messages" id="messages-2"></div>
+                <div class="input-area">
+                    <input type="text" id="input-2" placeholder="Type or click mic to speak..." onkeypress="handleKeyPress(event, 2)">
+                    <button class="voice-btn" id="voice-2" onclick="toggleVoice(2)" title="Click to speak">🎤</button>
+                    <button onclick="sendMessage(2)">Send</button>
+                </div>
+                <div class="voice-status" id="status-2">Click mic to speak</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let selectedLanguage = { 1: 'en', 2: 'en' };
+        let recognition = { 1: null, 2: null };
+        let isRecording = { 1: false, 2: false };
+
+        // Simple offline translation dictionary
+        const translations = {
+            'hello': { hi: 'नमस्ते', ta: 'வணக்கம்', te: 'నమస్కారం' },
+            'admission': { hi: 'प्रवेश', ta: 'சேர்க்கை', te: 'ప్రవేశం' },
+            'library': { hi: 'पुस्तकालय', ta: 'நூலகம்', te: 'గ్రంథాలయం' },
+            'thank you': { hi: 'धन्यवाद', ta: 'நன்றி', te: 'ధన్యవాదాలు' }
+        };
+
+        function initSpeechRecognition() {
+            if ('webkitSpeechRecognition' in window) {
+                [1, 2].forEach(person => {
+                    recognition[person] = new webkitSpeechRecognition();
+                    recognition[person].continuous = false;
+                    recognition[person].interimResults = false;
+                    recognition[person].lang = selectedLanguage[person];
+                    
+                    recognition[person].onstart = function() {
+                        updateStatus(person, 'Listening... Speak now');
+                    };
+                    
+                    recognition[person].onresult = function(event) {
+                        const transcript = event.results[0][0].transcript;
+                        updateStatus(person, 'Processing...');
+                        sendVoiceMessage(person, transcript);
+                    };
+                    
+                    recognition[person].onend = function() {
+                        stopRecording(person);
+                        updateStatus(person, 'Click mic to speak');
+                    };
+                    
+                    recognition[person].onerror = function(event) {
+                        updateStatus(person, 'Error: Click mic to try again');
+                        stopRecording(person);
+                    };
+                });
+            }
+        }
+
+        function changeLanguage(person) {
+            selectedLanguage[person] = document.getElementById(`lang-${person}`).value;
+            if (recognition[person]) {
+                recognition[person].lang = selectedLanguage[person];
+            }
+        }
+
+        function toggleVoice(person) {
+            if (!recognition[person]) return;
+            if (isRecording[person]) {
+                recognition[person].stop();
+            } else {
+                recognition[person].start();
+                startRecording(person);
+            }
+        }
+
+        function startRecording(person) {
+            isRecording[person] = true;
+            const btn = document.getElementById(`voice-${person}`);
+            btn.classList.add('recording');
+            btn.textContent = '⏹️';
+            updateStatus(person, 'Recording... Click to stop');
+        }
+
+        function stopRecording(person) {
+            isRecording[person] = false;
+            const btn = document.getElementById(`voice-${person}`);
+            btn.classList.remove('recording');
+            btn.textContent = '🎤';
+        }
+        
+        function updateStatus(person, message) {
+            document.getElementById(`status-${person}`).textContent = message;
+        }
+
+        function handleKeyPress(event, person) {
+            if (event.key === 'Enter') {
+                sendMessage(person);
+            }
+        }
+
+        function sendMessage(person) {
+            const input = document.getElementById(`input-${person}`);
+            const message = input.value.trim();
+            if (!message) return;
+
+            addMessage(person, message, 'user');
+
+            const otherPerson = person === 1 ? 2 : 1;
+            const translatedMessage = translateOffline(message, selectedLanguage[person], selectedLanguage[otherPerson]);
+            addMessage(otherPerson, `Person ${person}: ${translatedMessage}`, 'translated');
+            speakText(translatedMessage, selectedLanguage[otherPerson]);
+            
+            input.value = '';
+        }
+
+        function sendVoiceMessage(person, message) {
+            if (!message) return;
+            
+            addMessage(person, message, 'user');
+            
+            const otherPerson = person === 1 ? 2 : 1;
+            const translatedMessage = translateOffline(message, selectedLanguage[person], selectedLanguage[otherPerson]);
+            addMessage(otherPerson, `Person ${person}: ${translatedMessage}`, 'translated');
+            speakText(translatedMessage, selectedLanguage[otherPerson]);
+        }
+
+        function translateOffline(text, fromLang, toLang) {
+            if (fromLang === toLang) return text;
+            
+            const lowerText = text.toLowerCase();
+            for (const [english, translations] of Object.entries(translations)) {
+                if (lowerText.includes(english) && translations[toLang]) {
+                    return text.replace(new RegExp(english, 'gi'), translations[toLang]);
+                }
+            }
+            return text; // Return original if no translation found
+        }
+
+        function addMessage(person, text, sender) {
+            const messagesContainer = document.getElementById(`messages-${person}`);
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${sender}-message`;
+            const bubbleDiv = document.createElement('div');
+            bubbleDiv.className = 'message-bubble';
+            bubbleDiv.textContent = text;
+            messageDiv.appendChild(bubbleDiv);
+            messagesContainer.appendChild(messageDiv);
+            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+        }
+
+        function speakText(text, lang) {
+            if ('speechSynthesis' in window) {
+                speechSynthesis.cancel();
+                const utterance = new SpeechSynthesisUtterance(text);
+                utterance.lang = lang;
+                utterance.rate = 0.6;
+                utterance.pitch = 1.0;
+                utterance.volume = 1.0;
+                
+                const voices = speechSynthesis.getVoices();
+                const voice = voices.find(v => v.lang.startsWith(lang.split('-')[0]));
+                if (voice) utterance.voice = voice;
+                
+                speechSynthesis.speak(utterance);
+            }
+        }
+
+        window.onload = function() {
+            initSpeechRecognition();
+        };
+    </script>
+</body>
+</html>
